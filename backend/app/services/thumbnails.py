@@ -43,6 +43,9 @@ async def _extract_video_duration(video_path: Path) -> float | None:
         info = json.loads(proc.stdout)
         duration = float(info["format"]["duration"])
         return duration
+    except FileNotFoundError:
+        logger.warning("ffprobe non installé — pas d'extraction de durée")
+        return None
     except (KeyError, ValueError, json.JSONDecodeError) as e:
         logger.warning("Impossible de lire la durée vidéo : %s", e)
         return None
@@ -93,6 +96,9 @@ async def generate_video_thumbnail(file_data: bytes, object_key_prefix: str) -> 
                 subprocess.run, cmd,
                 capture_output=True, timeout=30,
             )
+        except FileNotFoundError:
+            logger.warning("ffmpeg non installé — pas de thumbnail vidéo")
+            return result
         except subprocess.TimeoutExpired:
             logger.error("ffmpeg timeout pour le thumbnail de %s", object_key_prefix)
             return result

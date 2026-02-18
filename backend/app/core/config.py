@@ -1,5 +1,6 @@
 """Configuration centrale de l'application."""
 
+import os
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -57,12 +58,13 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        if self.database_url_override:
-            url = self.database_url_override
-            # Railway fournit postgresql://, asyncpg a besoin de postgresql+asyncpg://
-            if url.startswith("postgresql://"):
-                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return url
+        # Railway fournit DATABASE_URL directement
+        raw = self.database_url_override or os.environ.get("DATABASE_URL")
+        if raw:
+            # asyncpg a besoin de postgresql+asyncpg://
+            if raw.startswith("postgresql://"):
+                return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return raw
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -70,11 +72,11 @@ class Settings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
-        if self.database_url_override:
-            url = self.database_url_override
-            if url.startswith("postgresql+asyncpg://"):
-                url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
-            return url
+        raw = self.database_url_override or os.environ.get("DATABASE_URL")
+        if raw:
+            if raw.startswith("postgresql+asyncpg://"):
+                return raw.replace("postgresql+asyncpg://", "postgresql://", 1)
+            return raw
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
