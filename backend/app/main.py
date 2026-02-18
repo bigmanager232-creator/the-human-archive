@@ -45,6 +45,14 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
             await conn.run_sync(Base.metadata.create_all)
         print("✅ Base de données initialisée")
+
+        # Migration ponctuelle : passer les archives draft → published
+        async with engine.begin() as conn:
+            result = await conn.execute(
+                text("UPDATE archives SET status = 'published' WHERE status = 'draft'")
+            )
+            if result.rowcount > 0:
+                print(f"✅ Migration : {result.rowcount} archive(s) passée(s) en published")
     except Exception as e:
         print(f"⚠️  Erreur init DB : {e}")
 
