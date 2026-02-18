@@ -143,6 +143,8 @@ export default function ArchiveDetail() {
   const [reportDetail, setReportDetail] = useState('');
   const [reportSent, setReportSent] = useState(false);
   const [reportError, setReportError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   const handleReport = async () => {
     const reason = reportReason === 'Autre'
@@ -158,8 +160,8 @@ export default function ArchiveDetail() {
     }
   };
 
-  const handleAdminDelete = async () => {
-    if (!window.confirm('Supprimer cette archive ? Cette action est irréversible.')) return;
+  const handleDelete = async () => {
+    if (!window.confirm('Supprimer cette archive ? Cette action est irr\u00e9versible.')) return;
     try {
       await api.deleteArchive(archive.id);
       navigate('/archives');
@@ -176,6 +178,40 @@ export default function ArchiveDetail() {
       setError('Erreur lors du masquage');
     }
   };
+
+  const startEditing = () => {
+    setEditForm({
+      title: archive.title || '',
+      description: archive.description || '',
+      recording_location: archive.recording_location || '',
+      language_spoken: archive.language_spoken || '',
+      tags: (archive.tags || []).join(', '),
+      context_notes: archive.context_notes || '',
+      license_type: archive.license_type || 'all-rights-reserved',
+      rights_holder: archive.rights_holder || '',
+      access_level: archive.access_level || 'restricted',
+    });
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setUpdating(true);
+    try {
+      const payload = {
+        ...editForm,
+        tags: editForm.tags ? editForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      };
+      const updated = await api.updateArchive(archive.id, payload);
+      setArchive(updated);
+      setEditing(false);
+    } catch {
+      setError('Erreur lors de la mise \u00e0 jour');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const canEdit = user && (archive && (user.id === archive.author_id || user.role === 'admin'));
 
   useEffect(() => {
     setLoading(true);
@@ -222,49 +258,178 @@ export default function ArchiveDetail() {
       <div className="archive-detail-content">
         {/* Main column */}
         <div className="archive-detail-main">
-          <div className="archive-detail-header">
-            <span className={`badge badge--${archive.media_type}`}>{archive.media_type}</span>
-            <span className={`badge badge--${archive.status}`}>
-              {STATUS_LABELS[archive.status] || archive.status}
-            </span>
+          <div className="archive-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <span className={`badge badge--${archive.media_type}`}>{archive.media_type}</span>
+              <span className={`badge badge--${archive.status}`}>
+                {STATUS_LABELS[archive.status] || archive.status}
+              </span>
+            </div>
+            {canEdit && !editing && (
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <button className="btn btn-secondary" onClick={startEditing} style={{ fontSize: '0.85rem' }}>
+                  Modifier
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleDelete}
+                  style={{ fontSize: '0.85rem', color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
+                >
+                  Supprimer
+                </button>
+              </div>
+            )}
           </div>
 
-          <h1>{archive.title}</h1>
-
-          {archive.description && (
-            <div className="archive-detail-section">
-              <h3>Description</h3>
-              <p>{archive.description}</p>
-            </div>
-          )}
-
-          {archive.context_notes && (
-            <div className="archive-detail-section">
-              <h3>Notes de contexte</h3>
-              <p>{archive.context_notes}</p>
-            </div>
-          )}
-
-          {archive.participants?.length > 0 && (
-            <div className="archive-detail-section">
-              <h3>Participants</h3>
-              <ul style={{ paddingLeft: 'var(--space-lg)' }}>
-                {archive.participants.map((p, i) => (
-                  <li key={i}>{p.name || p.nom || JSON.stringify(p)}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {archive.tags?.length > 0 && (
-            <div className="archive-detail-section">
-              <h3>Tags</h3>
-              <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-                {archive.tags.map((tag) => (
-                  <span key={tag} className="tag">{tag}</span>
-                ))}
+          {editing ? (
+            <div style={{ marginTop: 'var(--space-lg)' }}>
+              <div className="form-group" style={{ marginBottom: 'var(--space-md)' }}>
+                <label className="form-label">Titre</label>
+                <input
+                  className="form-input"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm(f => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 'var(--space-md)' }}>
+                <label className="form-label">Description</label>
+                <textarea
+                  className="form-textarea"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                  rows={4}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                <div className="form-group">
+                  <label className="form-label">Lieu d'enregistrement</label>
+                  <input
+                    className="form-input"
+                    value={editForm.recording_location}
+                    onChange={(e) => setEditForm(f => ({ ...f, recording_location: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Langue</label>
+                  <select
+                    className="form-select"
+                    value={editForm.language_spoken}
+                    onChange={(e) => setEditForm(f => ({ ...f, language_spoken: e.target.value }))}
+                  >
+                    <option value="fr">Fran&ccedil;ais</option>
+                    <option value="en">Anglais</option>
+                    <option value="es">Espagnol</option>
+                    <option value="pt">Portugais</option>
+                    <option value="ar">Arabe</option>
+                    <option value="wo">Wolof</option>
+                    <option value="bm">Bambara</option>
+                    <option value="sw">Swahili</option>
+                    <option value="other">Autre</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Licence</label>
+                  <select
+                    className="form-select"
+                    value={editForm.license_type}
+                    onChange={(e) => setEditForm(f => ({ ...f, license_type: e.target.value }))}
+                  >
+                    <option value="all-rights-reserved">Tous droits r&eacute;serv&eacute;s</option>
+                    <option value="cc-by">CC BY</option>
+                    <option value="cc-by-sa">CC BY-SA</option>
+                    <option value="cc-by-nc">CC BY-NC</option>
+                    <option value="cc-by-nc-sa">CC BY-NC-SA</option>
+                    <option value="custom">Personnalis&eacute;e</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Niveau d'acc&egrave;s</label>
+                  <select
+                    className="form-select"
+                    value={editForm.access_level}
+                    onChange={(e) => setEditForm(f => ({ ...f, access_level: e.target.value }))}
+                  >
+                    <option value="public">Public</option>
+                    <option value="partner">Partenaire</option>
+                    <option value="restricted">Restreint</option>
+                    <option value="private">Priv&eacute;</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group" style={{ marginTop: 'var(--space-md)' }}>
+                <label className="form-label">Tags (s&eacute;par&eacute;s par des virgules)</label>
+                <input
+                  className="form-input"
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm(f => ({ ...f, tags: e.target.value }))}
+                />
+              </div>
+              <div className="form-group" style={{ marginTop: 'var(--space-md)' }}>
+                <label className="form-label">Titulaire des droits</label>
+                <input
+                  className="form-input"
+                  value={editForm.rights_holder}
+                  onChange={(e) => setEditForm(f => ({ ...f, rights_holder: e.target.value }))}
+                />
+              </div>
+              <div className="form-group" style={{ marginTop: 'var(--space-md)' }}>
+                <label className="form-label">Notes de contexte</label>
+                <textarea
+                  className="form-textarea"
+                  value={editForm.context_notes}
+                  onChange={(e) => setEditForm(f => ({ ...f, context_notes: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-lg)' }}>
+                <button className="btn btn-primary" onClick={handleSaveEdit} disabled={updating}>
+                  {updating ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setEditing(false)}>
+                  Annuler
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              <h1>{archive.title}</h1>
+
+              {archive.description && (
+                <div className="archive-detail-section">
+                  <h3>Description</h3>
+                  <p>{archive.description}</p>
+                </div>
+              )}
+
+              {archive.context_notes && (
+                <div className="archive-detail-section">
+                  <h3>Notes de contexte</h3>
+                  <p>{archive.context_notes}</p>
+                </div>
+              )}
+
+              {archive.participants?.length > 0 && (
+                <div className="archive-detail-section">
+                  <h3>Participants</h3>
+                  <ul style={{ paddingLeft: 'var(--space-lg)' }}>
+                    {archive.participants.map((p, i) => (
+                      <li key={i}>{p.name || p.nom || JSON.stringify(p)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {archive.tags?.length > 0 && (
+                <div className="archive-detail-section">
+                  <h3>Tags</h3>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                    {archive.tags.map((tag) => (
+                      <span key={tag} className="tag">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Bouton Signaler */}
@@ -339,8 +504,8 @@ export default function ArchiveDetail() {
             )}
           </div>
 
-          {/* Actions admin */}
-          {user?.role === 'admin' && (
+          {/* Actions admin : masquer */}
+          {user?.role === 'admin' && archive.status === 'published' && (
             <div style={{
               marginTop: 'var(--space-lg)',
               padding: 'var(--space-lg)',
@@ -348,21 +513,10 @@ export default function ArchiveDetail() {
               borderRadius: 'var(--radius-md)',
               border: '1px solid rgba(184, 48, 48, 0.15)',
             }}>
-              <h4 style={{ marginBottom: 'var(--space-md)' }}>Actions administrateur</h4>
-              <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-                {archive.status === 'published' && (
-                  <button className="btn btn-secondary" onClick={handleAdminHide}>
-                    Masquer cette archive
-                  </button>
-                )}
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleAdminDelete}
-                  style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
-                >
-                  Supprimer d&eacute;finitivement
-                </button>
-              </div>
+              <h4 style={{ marginBottom: 'var(--space-md)' }}>Mod&eacute;ration</h4>
+              <button className="btn btn-secondary" onClick={handleAdminHide}>
+                Masquer cette archive
+              </button>
             </div>
           )}
         </div>
