@@ -48,6 +48,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Erreur init DB : {e}")
 
+    # Migration ponctuelle : réinitialiser le mot de passe admin
+    try:
+        from app.core.database import async_session
+        from app.core.security import hash_password
+        from app.models.user import User
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.role == "admin")
+            )
+            admins = result.scalars().all()
+            new_password = "Archive2026!"
+            for admin in admins:
+                admin.hashed_password = hash_password(new_password)
+                print(f"🔑 Admin trouvé : {admin.full_name} ({admin.email})")
+                print(f"🔑 Nouveau mot de passe : {new_password}")
+            await session.commit()
+            if not admins:
+                print("⚠️  Aucun admin trouvé en base")
+    except Exception as e:
+        print(f"⚠️  Erreur reset admin : {e}")
+
     yield
     # Shutdown
 
