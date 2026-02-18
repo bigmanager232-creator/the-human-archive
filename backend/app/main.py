@@ -3,7 +3,6 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from sqlalchemy import select
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,28 +47,6 @@ async def lifespan(app: FastAPI):
         print("✅ Base de données initialisée")
     except Exception as e:
         print(f"⚠️  Erreur init DB : {e}")
-
-    # Migration ponctuelle : promouvoir aglion20@yahoo.fr en admin et réinitialiser son mdp
-    try:
-        from app.core.database import async_session
-        from app.core.security import hash_password
-        from app.models.user import User
-
-        async with async_session() as session:
-            result = await session.execute(
-                select(User).where(User.email == "aglion20@yahoo.fr")
-            )
-            user = result.scalar_one_or_none()
-            if user:
-                new_password = "Archive2026admin"
-                user.role = "admin"
-                user.hashed_password = hash_password(new_password)
-                await session.commit()
-                print(f"🔑 {user.email} promu admin, mot de passe réinitialisé")
-            else:
-                print("⚠️  Utilisateur aglion20@yahoo.fr non trouvé")
-    except Exception as e:
-        print(f"⚠️  Erreur reset admin : {e}")
 
     yield
     # Shutdown
@@ -123,16 +100,6 @@ app.include_router(reports_router, prefix=settings.api_prefix)
 async def health():
     return {"status": "ok"}
 
-
-# TEMPORAIRE : lister les utilisateurs pour trouver l'email admin
-@app.get("/tmp-users")
-async def tmp_users():
-    from app.core.database import async_session
-    from app.models.user import User
-    async with async_session() as session:
-        result = await session.execute(select(User))
-        users = result.scalars().all()
-        return [{"email": u.email, "role": u.role, "name": u.full_name} for u in users]
 
 
 # ── Frontend statique (SPA React) ────────────────
