@@ -197,20 +197,32 @@ function AdminReports() {
 export default function Dashboard() {
   const { user } = useAuth();
   const [archives, setArchives] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [allArchives, setAllArchives] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getArchives({ page: 1, page_size: 6 })
-      .then((data) => setArchives(data.items || []))
+    // Charger les archives récentes pour l'affichage
+    const fetchRecent = api.getArchives({ page: 1, page_size: 6 })
+      .then((data) => {
+        setArchives(data.items || []);
+        setTotalCount(data.total || 0);
+      });
+
+    // Charger toutes les archives pour les stats (admin voit tout, contributor voit les siennes + published)
+    const fetchAll = api.getArchives({ page: 1, page_size: 100 })
+      .then((data) => setAllArchives(data.items || []));
+
+    Promise.all([fetchRecent, fetchAll])
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const stats = {
-    total: archives.length,
-    video: archives.filter(a => a.media_type === 'video').length,
-    audio: archives.filter(a => a.media_type === 'audio').length,
-    image: archives.filter(a => a.media_type === 'image').length,
+    total: totalCount,
+    video: allArchives.filter(a => a.media_type === 'video').length,
+    audio: allArchives.filter(a => a.media_type === 'audio').length,
+    image: allArchives.filter(a => a.media_type === 'image').length,
   };
 
   return (
