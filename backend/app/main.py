@@ -3,6 +3,7 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from sqlalchemy import select
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
