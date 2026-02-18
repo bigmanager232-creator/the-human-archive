@@ -260,27 +260,11 @@ export default function ArchiveDetail() {
       <div className="archive-detail-content">
         {/* Main column */}
         <div className="archive-detail-main">
-          <div className="archive-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <span className={`badge badge--${archive.media_type}`}>{archive.media_type}</span>
-              <span className={`badge badge--${archive.status}`}>
-                {STATUS_LABELS[archive.status] || archive.status}
-              </span>
-            </div>
-            {canEdit && !editing && (
-              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-                <button className="btn btn-secondary" onClick={startEditing} style={{ fontSize: '0.85rem' }}>
-                  Modifier
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleDelete}
-                  style={{ fontSize: '0.85rem', color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
-                >
-                  Supprimer
-                </button>
-              </div>
-            )}
+          <div className="archive-detail-header">
+            <span className={`badge badge--${archive.media_type}`}>{archive.media_type}</span>
+            <span className={`badge badge--${archive.status}`}>
+              {STATUS_LABELS[archive.status] || archive.status}
+            </span>
           </div>
 
           {editing ? (
@@ -395,6 +379,25 @@ export default function ArchiveDetail() {
           ) : (
             <>
               <h1>{archive.title}</h1>
+
+              {canEdit && (
+                <div style={{
+                  display: 'flex',
+                  gap: 'var(--space-sm)',
+                  marginBottom: 'var(--space-lg)',
+                }}>
+                  <button className="btn btn-secondary" onClick={startEditing}>
+                    Modifier
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleDelete}
+                    style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              )}
 
               {archive.description && (
                 <div className="archive-detail-section">
