@@ -87,6 +87,7 @@ class Archive(Base):
     # ── Relations ─────────────────────────────────
     author = relationship("User", back_populates="archives", lazy="selectin")
     territory = relationship("Territory", back_populates="archives", lazy="selectin")
+    reports = relationship("Report", back_populates="archive", lazy="selectin", cascade="all, delete-orphan")
 
     # ── Index ─────────────────────────────────────
     __table_args__ = (

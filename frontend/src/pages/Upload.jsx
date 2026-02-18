@@ -14,6 +14,7 @@ export default function Upload() {
   const [step, setStep] = useState(1); // 1: fichier, 2: contexte, 3: droits
   const [dragActive, setDragActive] = useState(false);
   const [territoryHint, setTerritoryHint] = useState('');
+  const [policyAccepted, setPolicyAccepted] = useState(false);
 
   const [form, setForm] = useState({
     title: '',
@@ -459,17 +460,47 @@ export default function Upload() {
               </div>
             </div>
 
+            {/* Rappel des contenus interdits */}
             <div style={{
-              padding: 'var(--space-md)',
-              background: 'rgba(45, 90, 107, 0.06)',
+              padding: 'var(--space-lg)',
+              background: 'rgba(184, 48, 48, 0.05)',
               borderRadius: 'var(--radius-sm)',
               marginTop: 'var(--space-lg)',
-              fontSize: '0.85rem',
-              color: 'var(--color-ocean)',
-              borderLeft: '3px solid var(--color-ocean)',
+              borderLeft: '3px solid var(--color-error)',
             }}>
-              Les archives déposées en mode « brouillon » ne seront visibles que par vous
-              et les éditeurs du projet. Elles pourront être publiées après validation.
+              <h4 style={{ marginBottom: 'var(--space-sm)', color: 'var(--color-error)', fontSize: '0.9rem' }}>
+                Contenus interdits sur la plateforme
+              </h4>
+              <ul style={{
+                fontSize: '0.85rem',
+                color: 'var(--color-earth)',
+                paddingLeft: 'var(--space-lg)',
+                marginBottom: 'var(--space-md)',
+                lineHeight: 1.6,
+              }}>
+                <li>Contenus pornographiques ou sexuellement explicites</li>
+                <li>Discours haineux, racisme, homophobie, discrimination</li>
+                <li>Violence ou incitation à la violence</li>
+                <li>Contenus trompeurs ou diffamatoires</li>
+                <li>Violation des droits d'auteur</li>
+              </ul>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
+                <input
+                  type="checkbox"
+                  id="policy"
+                  checked={policyAccepted}
+                  onChange={(e) => setPolicyAccepted(e.target.checked)}
+                  style={{ width: '18px', height: '18px', marginTop: '2px', flexShrink: 0 }}
+                />
+                <label htmlFor="policy" style={{
+                  fontSize: '0.85rem',
+                  color: 'var(--color-ink)',
+                  cursor: 'pointer',
+                }}>
+                  Je certifie que ce contenu respecte les règles de la plateforme. Je comprends que
+                  tout contenu signalé pourra être supprimé et que mon compte pourra être suspendu.
+                </label>
+              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-sm)', marginTop: 'var(--space-xl)' }}>
@@ -479,12 +510,12 @@ export default function Upload() {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={submitting || !form.title}
+                disabled={submitting || !form.title || !policyAccepted}
                 style={{ padding: 'var(--space-sm) var(--space-xl)' }}
               >
                 {submitting
                   ? (uploadProgress > 0 ? `Envoi ${uploadProgress}%…` : 'Préparation…')
-                  : 'Déposer l\'archive'}
+                  : 'Publier l\'archive'}
               </button>
             </div>
           </div>

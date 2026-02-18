@@ -11,6 +11,91 @@ function withToken(url) {
   return `${url}${sep}token=${encodeURIComponent(token)}`;
 }
 
+function AdminReports() {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReports = () => {
+    setLoading(true);
+    api.getReports('pending')
+      .then((data) => setReports(data.items || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchReports(); }, []);
+
+  const handleDismiss = async (reportId) => {
+    try {
+      await api.dismissReport(reportId);
+      setReports(prev => prev.filter(r => r.id !== reportId));
+    } catch {}
+  };
+
+  const handleHide = async (archiveId) => {
+    try {
+      await api.hideArchive(archiveId);
+      setReports(prev => prev.filter(r => r.archive_id !== archiveId));
+    } catch {}
+  };
+
+  const handleDelete = async (archiveId) => {
+    if (!window.confirm('Supprimer cette archive ? Cette action est irr\u00e9versible.')) return;
+    try {
+      await api.deleteArchive(archiveId);
+      setReports(prev => prev.filter(r => r.archive_id !== archiveId));
+    } catch {}
+  };
+
+  if (loading) return <p style={{ color: 'var(--color-clay)' }}>Chargement des signalements...</p>;
+  if (reports.length === 0) return <p style={{ color: 'var(--color-clay)' }}>Aucun signalement en attente.</p>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+      {reports.map((report) => (
+        <div key={report.id} className="card" style={{
+          borderLeft: '4px solid var(--color-error)',
+          padding: 'var(--space-lg)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ marginBottom: 'var(--space-xs)' }}>
+                <Link to={`/archives/${report.archive_id}`} style={{ color: 'var(--color-ink)' }}>
+                  {report.archive_title || 'Archive'}
+                </Link>
+              </h4>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-earth)', marginBottom: 'var(--space-xs)' }}>
+                Signal&eacute; par {report.reporter_name || 'Utilisateur'} &mdash;{' '}
+                {new Date(report.created_at).toLocaleDateString('fr-FR', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })}
+              </p>
+              <p style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'var(--color-error)' }}>
+                {report.reason}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)', flexShrink: 0 }}>
+              <button className="btn btn-secondary" onClick={() => handleDismiss(report.id)} style={{ fontSize: '0.8rem' }}>
+                Lever le signalement
+              </button>
+              <button className="btn btn-secondary" onClick={() => handleHide(report.archive_id)} style={{ fontSize: '0.8rem' }}>
+                Masquer
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleDelete(report.archive_id)}
+                style={{ fontSize: '0.8rem', color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [archives, setArchives] = useState([]);
@@ -46,7 +131,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.video}</div>
-          <div className="stat-label">Vidéos</div>
+          <div className="stat-label">Vid&eacute;os</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.audio}</div>
@@ -58,15 +143,23 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Section admin : contenus signal&eacute;s */}
+      {user?.role === 'admin' && (
+        <div style={{ marginBottom: 'var(--space-2xl)' }}>
+          <h2 style={{ marginBottom: 'var(--space-lg)' }}>Contenus signal&eacute;s</h2>
+          <AdminReports />
+        </div>
+      )}
+
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 'var(--space-lg)',
       }}>
-        <h2>Archives récentes</h2>
+        <h2>Archives r&eacute;centes</h2>
         <Link to="/upload" className="btn btn-primary">
-          + Nouveau dépôt
+          + Nouveau d&eacute;p&ocirc;t
         </Link>
       </div>
 
@@ -78,7 +171,7 @@ export default function Dashboard() {
             Aucune archive pour le moment.
           </p>
           <Link to="/upload" className="btn btn-primary">
-            Déposer votre première archive
+            D&eacute;poser votre premi&egrave;re archive
           </Link>
         </div>
       ) : (

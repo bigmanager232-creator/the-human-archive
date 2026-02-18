@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../utils/api';
 
@@ -121,13 +121,61 @@ const WORKFLOW = {
   published: { next: 'archived',  label: 'Archiver',              nextLabel: 'Archivé' },
 };
 
+const REPORT_REASONS = [
+  'Contenu pornographique ou sexuellement explicite',
+  'Discours haineux, racisme ou discrimination',
+  'Violence ou incitation à la violence',
+  'Contenu trompeur ou faux',
+  'Violation des droits d\'auteur',
+  'Autre',
+];
+
 export default function ArchiveDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [archive, setArchive] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportSent, setReportSent] = useState(false);
+  const [reportError, setReportError] = useState('');
+
+  const handleReport = async () => {
+    const reason = reportReason === 'Autre'
+      ? reportDetail
+      : `${reportReason}${reportDetail ? ` — ${reportDetail}` : ''}`;
+    if (!reason || reason.length < 5) return;
+    try {
+      await api.reportArchive(archive.id, reason);
+      setReportSent(true);
+      setShowReport(false);
+    } catch (err) {
+      setReportError(err.message);
+    }
+  };
+
+  const handleAdminDelete = async () => {
+    if (!window.confirm('Supprimer cette archive ? Cette action est irréversible.')) return;
+    try {
+      await api.deleteArchive(archive.id);
+      navigate('/archives');
+    } catch {
+      setError('Erreur lors de la suppression');
+    }
+  };
+
+  const handleAdminHide = async () => {
+    try {
+      await api.hideArchive(archive.id);
+      setArchive(prev => ({ ...prev, status: 'draft' }));
+    } catch {
+      setError('Erreur lors du masquage');
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -215,6 +263,105 @@ export default function ArchiveDetail() {
                 {archive.tags.map((tag) => (
                   <span key={tag} className="tag">{tag}</span>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bouton Signaler */}
+          <div style={{ marginTop: 'var(--space-xl)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--color-paper-warm)' }}>
+            {reportSent ? (
+              <p style={{ color: 'var(--color-forest)', fontSize: '0.9rem' }}>
+                Signalement envoy&eacute;. Merci pour votre vigilance.
+              </p>
+            ) : !showReport ? (
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowReport(true)}
+                style={{ fontSize: '0.85rem', color: 'var(--color-error)' }}
+              >
+                Signaler ce contenu
+              </button>
+            ) : (
+              <div style={{
+                padding: 'var(--space-lg)',
+                background: 'rgba(184, 48, 48, 0.04)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(184, 48, 48, 0.15)',
+              }}>
+                <h4 style={{ marginBottom: 'var(--space-md)', color: 'var(--color-error)' }}>
+                  Signaler ce contenu
+                </h4>
+                <div className="form-group" style={{ marginBottom: 'var(--space-md)' }}>
+                  <label className="form-label">Motif du signalement</label>
+                  <select
+                    className="form-select"
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                  >
+                    <option value="">-- Choisir un motif --</option>
+                    {REPORT_REASONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 'var(--space-md)' }}>
+                  <label className="form-label">Pr&eacute;cisions (optionnel)</label>
+                  <textarea
+                    className="form-textarea"
+                    value={reportDetail}
+                    onChange={(e) => setReportDetail(e.target.value)}
+                    placeholder="D&eacute;crivez le probl&egrave;me..."
+                    rows={3}
+                  />
+                </div>
+                {reportError && (
+                  <p style={{ color: 'var(--color-error)', fontSize: '0.85rem', marginBottom: 'var(--space-sm)' }}>
+                    {reportError}
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleReport}
+                    disabled={!reportReason}
+                    style={{ background: 'var(--color-error)' }}
+                  >
+                    Envoyer le signalement
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => { setShowReport(false); setReportError(''); }}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions admin */}
+          {user?.role === 'admin' && (
+            <div style={{
+              marginTop: 'var(--space-lg)',
+              padding: 'var(--space-lg)',
+              background: 'rgba(184, 48, 48, 0.04)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(184, 48, 48, 0.15)',
+            }}>
+              <h4 style={{ marginBottom: 'var(--space-md)' }}>Actions administrateur</h4>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                {archive.status === 'published' && (
+                  <button className="btn btn-secondary" onClick={handleAdminHide}>
+                    Masquer cette archive
+                  </button>
+                )}
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleAdminDelete}
+                  style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
+                >
+                  Supprimer d&eacute;finitivement
+                </button>
               </div>
             </div>
           )}

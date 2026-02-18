@@ -229,6 +229,49 @@ class ApiClient {
     return res.json();
   }
 
+  // ── Reports (signalements) ─────────────────
+
+  async reportArchive(archiveId, reason) {
+    const res = await this.request(`/archives/${archiveId}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Erreur lors du signalement');
+    }
+    return res.json();
+  }
+
+  async getReports(status = 'pending') {
+    const res = await this.request(`/admin/reports?status_filter=${status}`);
+    if (!res.ok) throw new Error('Erreur de chargement');
+    return res.json();
+  }
+
+  async dismissReport(reportId) {
+    const res = await this.request(`/admin/reports/${reportId}`, {
+      method: 'PATCH',
+    });
+    if (!res.ok) throw new Error('Erreur lors de la levée du signalement');
+    return res.json();
+  }
+
+  async hideArchive(archiveId) {
+    const res = await this.request(`/admin/archives/${archiveId}/hide`, {
+      method: 'PATCH',
+    });
+    if (!res.ok) throw new Error('Erreur lors du masquage');
+    return res.json();
+  }
+
+  async deleteArchive(archiveId) {
+    const res = await this.request(`/archives/${archiveId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Erreur lors de la suppression');
+  }
+
   // ── Territories ─────────────────────────────
 
   async getTerritories() {

@@ -120,7 +120,7 @@ async def create_archive(
         access_level=data.access_level,
         consent_obtained=data.consent_obtained,
         author_id=current_user.id,
-        status="draft",
+        status="published",
     )
     db.add(archive)
     await db.flush()
@@ -191,10 +191,10 @@ async def list_archives(
     if territory_id:
         query = query.where(Archive.territory_id == territory_id)
 
-    # Filtrage par droits d'accès
+    # Visibilité : published visible par tous, draft/review visible par auteur + admin
     if current_user.role not in ("admin", "editor"):
         query = query.where(
-            (Archive.access_level == "public") | (Archive.author_id == current_user.id)
+            (Archive.status == "published") | (Archive.author_id == current_user.id)
         )
 
     # Compter le total
@@ -281,10 +281,10 @@ async def export_archives_csv(
     if territory_id:
         query = query.where(Archive.territory_id == territory_id)
 
-    # Filtrage par droits d'accès
+    # Visibilité : published visible par tous, draft/review visible par auteur + admin
     if current_user.role not in ("admin", "editor"):
         query = query.where(
-            (Archive.access_level == "public") | (Archive.author_id == current_user.id)
+            (Archive.status == "published") | (Archive.author_id == current_user.id)
         )
 
     query = query.order_by(Archive.created_at.desc())
@@ -333,8 +333,8 @@ async def get_archive(
     if not archive:
         raise HTTPException(status_code=404, detail="Archive non trouvée")
 
-    # Vérifier les droits d'accès
-    if archive.access_level == "private" and archive.author_id != current_user.id:
+    # Visibilité : draft/review visible uniquement par auteur + admin
+    if archive.status not in ("published", "archived") and archive.author_id != current_user.id:
         if current_user.role not in ("admin", "editor"):
             raise HTTPException(status_code=403, detail="Accès non autorisé")
 
@@ -413,10 +413,10 @@ async def search_archives(
     if territory_id:
         query = query.where(Archive.territory_id == territory_id)
 
-    # Filtrage par droits d'accès
+    # Visibilité : published visible par tous, draft/review visible par auteur + admin
     if current_user.role not in ("admin", "editor"):
         query = query.where(
-            (Archive.access_level == "public") | (Archive.author_id == current_user.id)
+            (Archive.status == "published") | (Archive.author_id == current_user.id)
         )
 
     # Ranking par pertinence
@@ -456,7 +456,7 @@ async def stream_media(
     if not archive or not archive.file_key:
         raise HTTPException(status_code=404, detail="Fichier non trouvé")
 
-    if archive.access_level == "private" and archive.author_id != current_user.id:
+    if archive.status not in ("published", "archived") and archive.author_id != current_user.id:
         if current_user.role not in ("admin", "editor"):
             raise HTTPException(status_code=403, detail="Accès non autorisé")
 
@@ -485,7 +485,7 @@ async def stream_thumbnail(
     if not archive or not archive.thumbnail_key:
         raise HTTPException(status_code=404, detail="Thumbnail non trouvé")
 
-    if archive.access_level == "private" and archive.author_id != current_user.id:
+    if archive.status not in ("published", "archived") and archive.author_id != current_user.id:
         if current_user.role not in ("admin", "editor"):
             raise HTTPException(status_code=403, detail="Accès non autorisé")
 

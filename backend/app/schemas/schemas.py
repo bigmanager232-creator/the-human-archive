@@ -173,6 +173,31 @@ class SearchQuery(BaseModel):
 
 # ── Upload ────────────────────────────────────────
 
+# ── Report (signalement) ─────────────────────────
+
+class ReportCreate(BaseModel):
+    reason: str = Field(min_length=5, max_length=1000)
+
+class ReportResponse(BaseModel):
+    id: UUID
+    archive_id: UUID
+    reporter_id: UUID
+    reason: str
+    status: str
+    created_at: datetime
+    archive_title: Optional[str] = None
+    reporter_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ReportListResponse(BaseModel):
+    items: list[ReportResponse]
+    total: int
+
+
+# ── Upload ────────────────────────────────────
+
 class UploadUrlRequest(BaseModel):
     filename: str
     content_type: str

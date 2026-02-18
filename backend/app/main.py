@@ -14,6 +14,7 @@ from app.core.storage_dispatch import ensure_bucket_exists
 from app.api.auth import router as auth_router
 from app.api.archives import router as archives_router
 from app.api.territories import router as territories_router
+from app.api.reports import router as reports_router
 
 settings = get_settings()
 
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
         from app.models.user import User  # noqa
         from app.models.archive import Archive  # noqa
         from app.models.territory import Territory  # noqa
+        from app.models.report import Report  # noqa
         from sqlalchemy import text
 
         async with engine.begin() as conn:
@@ -91,6 +93,7 @@ if settings.enable_compression:
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(archives_router, prefix=settings.api_prefix)
 app.include_router(territories_router, prefix=settings.api_prefix)
+app.include_router(reports_router, prefix=settings.api_prefix)
 
 
 @app.get("/health")
