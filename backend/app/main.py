@@ -123,6 +123,17 @@ async def health():
     return {"status": "ok"}
 
 
+# TEMPORAIRE : lister les utilisateurs pour trouver l'email admin
+@app.get("/tmp-users")
+async def tmp_users():
+    from app.core.database import async_session
+    from app.models.user import User
+    async with async_session() as session:
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+        return [{"email": u.email, "role": u.role, "name": u.full_name} for u in users]
+
+
 # ── Frontend statique (SPA React) ────────────────
 
 if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
