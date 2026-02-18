@@ -211,8 +211,6 @@ export default function ArchiveDetail() {
     }
   };
 
-  const canEdit = user && (archive && (user.id === archive.author_id || user.role === 'admin'));
-
   useEffect(() => {
     setLoading(true);
     setError('');
@@ -243,6 +241,10 @@ export default function ArchiveDetail() {
       </div>
     );
   }
+
+  const isOwner = user && archive && String(user.id) === String(archive.author_id);
+  const isAdmin = user && user.role === 'admin';
+  const canEdit = isOwner || isAdmin;
 
   return (
     <div className="container main-content archive-detail">

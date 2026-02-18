@@ -23,15 +23,30 @@ async def upload_file(file_data: bytes, object_key: str, content_type: str) -> s
     return object_key
 
 
-def get_file_object(object_key: str):
+def get_file_object(object_key: str, range_header: str = None):
     """Lire un fichier depuis le disque local (compatible avec StreamingResponse)."""
     file_path = STORAGE_DIR / object_key
     if not file_path.exists():
         raise FileNotFoundError(f"Fichier non trouvé : {object_key}")
     data = file_path.read_bytes()
+    total = len(data)
+
+    if range_header:
+        # Parser "bytes=start-end"
+        range_spec = range_header.replace("bytes=", "")
+        parts = range_spec.split("-")
+        start = int(parts[0]) if parts[0] else 0
+        end = int(parts[1]) if parts[1] else total - 1
+        end = min(end, total - 1)
+        return {
+            "Body": io.BytesIO(data[start:end + 1]),
+            "ContentLength": end - start + 1,
+            "ContentRange": f"bytes {start}-{end}/{total}",
+        }
+
     return {
         "Body": io.BytesIO(data),
-        "ContentLength": len(data),
+        "ContentLength": total,
     }
 
 

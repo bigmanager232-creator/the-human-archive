@@ -63,10 +63,13 @@ async def get_presigned_url(object_key: str, expires_in: int = 3600) -> str:
     )
 
 
-def get_file_object(object_key: str):
+def get_file_object(object_key: str, range_header: str = None):
     """Récupérer un objet S3 depuis MinIO (pour streaming via le backend)."""
     client = get_s3_client()
-    return client.get_object(Bucket=settings.minio_bucket, Key=object_key)
+    params = {"Bucket": settings.minio_bucket, "Key": object_key}
+    if range_header:
+        params["Range"] = range_header
+    return client.get_object(**params)
 
 
 async def delete_file(object_key: str):

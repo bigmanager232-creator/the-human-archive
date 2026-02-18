@@ -5,8 +5,8 @@ import io
 import uuid
 import re
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Query, status
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text
 from app.core.database import get_db
@@ -445,11 +445,12 @@ async def search_archives(
 
 @router.get("/{archive_id}/media")
 async def stream_media(
+    request: Request,
     archive_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token_param),
 ):
-    """Streamer le fichier média d'une archive via le backend."""
+    """Streamer le fichier média avec support Range requests."""
     result = await db.execute(select(Archive).where(Archive.id == archive_id))
     archive = result.scalar_one_or_none()
 
@@ -460,16 +461,35 @@ async def stream_media(
         if current_user.role not in ("admin", "editor"):
             raise HTTPException(status_code=403, detail="Accès non autorisé")
 
+    range_header = request.headers.get("range")
+    content_type = archive.mime_type or "application/octet-stream"
+
     try:
-        s3_object = get_file_object(archive.file_key)
+        if range_header:
+            s3_object = get_file_object(archive.file_key, range_header=range_header)
+            content_range = s3_object.get("ContentRange", "")
+            return StreamingResponse(
+                s3_object["Body"],
+                status_code=206,
+                media_type=content_type,
+                headers={
+                    "Content-Length": str(s3_object.get("ContentLength", "")),
+                    "Content-Range": content_range,
+                    "Accept-Ranges": "bytes",
+                },
+            )
+        else:
+            s3_object = get_file_object(archive.file_key)
+            return StreamingResponse(
+                s3_object["Body"],
+                media_type=content_type,
+                headers={
+                    "Content-Length": str(s3_object.get("ContentLength", "")),
+                    "Accept-Ranges": "bytes",
+                },
+            )
     except Exception:
         raise HTTPException(status_code=404, detail="Fichier non trouvé dans le stockage")
-
-    return StreamingResponse(
-        s3_object["Body"],
-        media_type=archive.mime_type or "application/octet-stream",
-        headers={"Content-Length": str(s3_object.get("ContentLength", ""))},
-    )
 
 
 @router.get("/{archive_id}/thumbnail")
