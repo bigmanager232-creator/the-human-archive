@@ -48,6 +48,44 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Erreur init DB : {e}")
 
+    # Migration ponctuelle : rôles + création admin
+    try:
+        from sqlalchemy import select
+        from app.core.database import async_session
+        from app.core.security import hash_password
+        from app.models.user import User
+
+        async with async_session() as session:
+            # 1. Passer aglion20@yahoo.fr en contributor
+            result = await session.execute(select(User).where(User.email == "aglion20@yahoo.fr"))
+            u = result.scalar_one_or_none()
+            if u:
+                u.role = "contributor"
+                print(f"✅ {u.email} -> contributor")
+
+            # 2. Créer admin@humanarchive.org
+            result = await session.execute(select(User).where(User.email == "admin@humanarchive.org"))
+            existing = result.scalar_one_or_none()
+            if not existing:
+                admin = User(
+                    email="admin@humanarchive.org",
+                    hashed_password=hash_password("Admin2026!"),
+                    full_name="Administrateur",
+                    role="admin",
+                    is_active=True,
+                )
+                session.add(admin)
+                print("✅ admin@humanarchive.org créé (admin)")
+            else:
+                existing.role = "admin"
+                existing.hashed_password = hash_password("Admin2026!")
+                existing.full_name = "Administrateur"
+                print("✅ admin@humanarchive.org mis à jour (admin)")
+
+            await session.commit()
+    except Exception as e:
+        print(f"⚠️  Erreur migration : {e}")
+
     yield
     # Shutdown
 
