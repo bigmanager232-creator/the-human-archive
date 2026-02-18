@@ -11,6 +11,104 @@ function withToken(url) {
   return `${url}${sep}token=${encodeURIComponent(token)}`;
 }
 
+function AdminPasswordReset() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api.getUsers()
+      .then((data) => setUsers(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    setMessage('');
+    setError('');
+    setSubmitting(true);
+    try {
+      await api.adminResetPassword(selectedUser, newPassword);
+      setMessage('Mot de passe r\u00e9initialis\u00e9 avec succ\u00e8s.');
+      setNewPassword('');
+      setSelectedUser(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <p style={{ color: 'var(--color-clay)' }}>Chargement des utilisateurs...</p>;
+
+  return (
+    <div className="card" style={{ padding: 'var(--space-lg)' }}>
+      {message && (
+        <p style={{
+          color: 'var(--color-forest)',
+          fontSize: '0.875rem',
+          marginBottom: 'var(--space-md)',
+          padding: 'var(--space-sm)',
+          background: 'rgba(58, 90, 64, 0.08)',
+          borderRadius: 'var(--radius-sm)',
+        }}>{message}</p>
+      )}
+      {error && (
+        <p style={{
+          color: 'var(--color-error)',
+          fontSize: '0.875rem',
+          marginBottom: 'var(--space-md)',
+          padding: 'var(--space-sm)',
+          background: 'rgba(184, 48, 48, 0.08)',
+          borderRadius: 'var(--radius-sm)',
+        }}>{error}</p>
+      )}
+      <form onSubmit={handleReset}>
+        <div className="form-group">
+          <label className="form-label">Utilisateur</label>
+          <select
+            className="form-input"
+            value={selectedUser || ''}
+            onChange={(e) => setSelectedUser(e.target.value || null)}
+            required
+          >
+            <option value="">S&eacute;lectionner un utilisateur</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name} ({u.email})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Nouveau mot de passe</label>
+          <input
+            className="form-input"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+        </div>
+        <button
+          className="btn btn-primary"
+          type="submit"
+          disabled={submitting || !selectedUser}
+        >
+          {submitting ? 'R\u00e9initialisation\u2026' : 'R\u00e9initialiser le mot de passe'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function AdminReports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -148,6 +246,14 @@ export default function Dashboard() {
         <div style={{ marginBottom: 'var(--space-2xl)' }}>
           <h2 style={{ marginBottom: 'var(--space-lg)' }}>Contenus signal&eacute;s</h2>
           <AdminReports />
+        </div>
+      )}
+
+      {/* Section admin : r&eacute;initialisation mot de passe */}
+      {user?.role === 'admin' && (
+        <div style={{ marginBottom: 'var(--space-2xl)' }}>
+          <h2 style={{ marginBottom: 'var(--space-lg)' }}>R&eacute;initialiser un mot de passe</h2>
+          <AdminPasswordReset />
         </div>
       )}
 

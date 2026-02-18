@@ -117,6 +117,42 @@ class ApiClient {
     this.clearTokens();
   }
 
+  async forgotPassword(email) {
+    const res = await this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) throw new Error('Erreur lors de la demande');
+    return res.json();
+  }
+
+  async resetPassword(token, newPassword) {
+    const res = await this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Erreur lors de la r\u00e9initialisation');
+    }
+    return res.json();
+  }
+
+  async adminResetPassword(userId, newPassword) {
+    const res = await this.request('/auth/admin/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, new_password: newPassword }),
+    });
+    if (!res.ok) throw new Error('Erreur lors de la r\u00e9initialisation');
+    return res.json();
+  }
+
+  async getUsers() {
+    const res = await this.request('/auth/admin/users');
+    if (!res.ok) throw new Error('Erreur de chargement');
+    return res.json();
+  }
+
   // ── Archives ────────────────────────────────
 
   async getArchives(params = {}) {

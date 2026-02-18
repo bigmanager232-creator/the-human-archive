@@ -7,6 +7,7 @@ import Upload from './pages/Upload';
 import ArchiveDetail from './pages/ArchiveDetail';
 import Territories from './pages/Territories';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ function AppRoutes() {
       <main>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />
