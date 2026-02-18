@@ -4,7 +4,7 @@
 FROM node:20-alpine AS frontend
 
 WORKDIR /build
-# Cache bust: 2026-02-18-v2
+# Cache bust: 2026-02-19-v1
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN rm -rf node_modules package-lock.json && npm install
 RUN npm install @rollup/rollup-linux-x64-musl
