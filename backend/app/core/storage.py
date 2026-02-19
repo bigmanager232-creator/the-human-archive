@@ -8,11 +8,20 @@ from app.core.config import get_settings
 settings = get_settings()
 
 
+def _build_endpoint_url(host: str) -> str:
+    """Construire l'URL de l'endpoint S3 en évitant les doublons de protocole."""
+    host = host.strip()
+    if host.startswith("https://") or host.startswith("http://"):
+        return host
+    scheme = "https" if settings.minio_use_ssl else "http"
+    return f"{scheme}://{host}"
+
+
 def get_s3_client():
     """Créer un client S3 (MinIO local ou Cloudflare R2)."""
     return boto3.client(
         "s3",
-        endpoint_url=f"{'https' if settings.minio_use_ssl else 'http'}://{settings.minio_endpoint}",
+        endpoint_url=_build_endpoint_url(settings.minio_endpoint),
         aws_access_key_id=settings.minio_root_user,
         aws_secret_access_key=settings.minio_root_password,
         config=BotoConfig(signature_version="s3v4"),
@@ -24,7 +33,7 @@ def get_s3_public_client():
     """Créer un client S3 avec l'endpoint public (pour URLs navigateur)."""
     return boto3.client(
         "s3",
-        endpoint_url=f"{'https' if settings.minio_use_ssl else 'http'}://{settings.minio_public_endpoint}",
+        endpoint_url=_build_endpoint_url(settings.minio_public_endpoint),
         aws_access_key_id=settings.minio_root_user,
         aws_secret_access_key=settings.minio_root_password,
         config=BotoConfig(signature_version="s3v4"),
