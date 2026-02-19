@@ -131,6 +131,8 @@ async def debug_storage():
         "env_STORAGE_BACKEND": os.environ.get("STORAGE_BACKEND", "NOT SET"),
         "df": df,
         "mounts_data": [l for l in mounts.split("\n") if "data" in l.lower()] if isinstance(mounts, str) else [],
+        "all_mounts": [l for l in mounts.split("\n") if l.strip() and "proc" not in l and "sys" not in l and "cgroup" not in l and "devpts" not in l and "mqueue" not in l and "shm" not in l] if isinstance(mounts, str) else [],
+        "ls_data": os.listdir("/data") if os.path.exists("/data") else "dir /data not found",
     }
 
 
