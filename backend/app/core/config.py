@@ -28,13 +28,14 @@ class Settings(BaseSettings):
     storage_backend: str = "s3"  # "s3" ou "local"
     storage_local_dir: str = "/data/uploads"
 
-    # MinIO / S3 (utilisé si storage_backend == "s3")
+    # S3-compatible (MinIO local / Cloudflare R2 en production)
     minio_endpoint: str = "minio:9000"
     minio_public_endpoint: str = "localhost:9000"
     minio_root_user: str = "minioadmin"
     minio_root_password: str = "minioadmin123"
     minio_bucket: str = "archives"
     minio_use_ssl: bool = False
+    s3_region: str = "auto"
 
     # JWT
     jwt_secret_key: str = "change-me-jwt"

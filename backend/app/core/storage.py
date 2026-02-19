@@ -1,4 +1,4 @@
-"""Service de stockage S3-compatible (MinIO)."""
+"""Service de stockage S3-compatible (MinIO / Cloudflare R2)."""
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -9,14 +9,14 @@ settings = get_settings()
 
 
 def get_s3_client():
-    """Créer un client S3 pour MinIO (réseau interne Docker)."""
+    """Créer un client S3 (MinIO local ou Cloudflare R2)."""
     return boto3.client(
         "s3",
         endpoint_url=f"{'https' if settings.minio_use_ssl else 'http'}://{settings.minio_endpoint}",
         aws_access_key_id=settings.minio_root_user,
         aws_secret_access_key=settings.minio_root_password,
         config=BotoConfig(signature_version="s3v4"),
-        region_name="us-east-1",
+        region_name=settings.s3_region,
     )
 
 
@@ -28,7 +28,7 @@ def get_s3_public_client():
         aws_access_key_id=settings.minio_root_user,
         aws_secret_access_key=settings.minio_root_password,
         config=BotoConfig(signature_version="s3v4"),
-        region_name="us-east-1",
+        region_name=settings.s3_region,
     )
 
 
@@ -37,12 +37,17 @@ def ensure_bucket_exists():
     client = get_s3_client()
     try:
         client.head_bucket(Bucket=settings.minio_bucket)
-    except ClientError:
-        client.create_bucket(Bucket=settings.minio_bucket)
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "")
+        if error_code in ("404", "NoSuchBucket"):
+            client.create_bucket(Bucket=settings.minio_bucket)
+        else:
+            # R2 peut retourner 403 si le bucket existe mais les permissions sont limitées
+            print(f"⚠️  Vérification bucket : {e}")
 
 
 async def upload_file(file_data: bytes, object_key: str, content_type: str) -> str:
-    """Upload un fichier vers MinIO."""
+    """Upload un fichier vers le stockage S3."""
     client = get_s3_client()
     client.put_object(
         Bucket=settings.minio_bucket,
@@ -54,7 +59,7 @@ async def upload_file(file_data: bytes, object_key: str, content_type: str) -> s
 
 
 async def get_presigned_url(object_key: str, expires_in: int = 3600) -> str:
-    """Générer une URL pré-signée pour accéder à un fichier (accessible depuis le navigateur)."""
+    """Générer une URL pré-signée pour accéder à un fichier."""
     client = get_s3_public_client()
     return client.generate_presigned_url(
         "get_object",
@@ -64,7 +69,7 @@ async def get_presigned_url(object_key: str, expires_in: int = 3600) -> str:
 
 
 def get_file_object(object_key: str, range_header: str = None):
-    """Récupérer un objet S3 depuis MinIO (pour streaming via le backend)."""
+    """Récupérer un objet S3 (pour streaming via le backend)."""
     client = get_s3_client()
     params = {"Bucket": settings.minio_bucket, "Key": object_key}
     if range_header:
@@ -73,13 +78,13 @@ def get_file_object(object_key: str, range_header: str = None):
 
 
 async def delete_file(object_key: str):
-    """Supprimer un fichier de MinIO."""
+    """Supprimer un fichier du stockage S3."""
     client = get_s3_client()
     client.delete_object(Bucket=settings.minio_bucket, Key=object_key)
 
 
 async def generate_upload_url(object_key: str, content_type: str, expires_in: int = 3600) -> str:
-    """Générer une URL pré-signée pour upload direct (chunked upload)."""
+    """Générer une URL pré-signée pour upload direct."""
     client = get_s3_public_client()
     return client.generate_presigned_url(
         "put_object",
