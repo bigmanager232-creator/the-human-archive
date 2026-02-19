@@ -1,5 +1,6 @@
 """The Human Archive – Point d'entrée de l'application."""
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -25,9 +26,14 @@ STATIC_DIR = Path("/app/static")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Cycle de vie de l'application."""
-    # Startup – initialiser le stockage
+    # Startup – initialiser le stockage (dans un thread pour ne pas bloquer le démarrage)
     try:
-        ensure_bucket_exists()
+        await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(None, ensure_bucket_exists),
+            timeout=15,
+        )
+    except asyncio.TimeoutError:
+        print("⚠️  Timeout connexion stockage (15s) – l'app démarre quand même")
     except Exception as e:
         print(f"⚠️  Stockage non disponible au démarrage : {e}")
 

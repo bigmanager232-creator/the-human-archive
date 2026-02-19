@@ -24,7 +24,12 @@ def get_s3_client():
         endpoint_url=_build_endpoint_url(settings.minio_endpoint),
         aws_access_key_id=settings.minio_root_user,
         aws_secret_access_key=settings.minio_root_password,
-        config=BotoConfig(signature_version="s3v4"),
+        config=BotoConfig(
+            signature_version="s3v4",
+            connect_timeout=5,
+            read_timeout=10,
+            retries={"max_attempts": 1},
+        ),
         region_name=settings.s3_region,
     )
 
@@ -36,7 +41,12 @@ def get_s3_public_client():
         endpoint_url=_build_endpoint_url(settings.minio_public_endpoint),
         aws_access_key_id=settings.minio_root_user,
         aws_secret_access_key=settings.minio_root_password,
-        config=BotoConfig(signature_version="s3v4"),
+        config=BotoConfig(
+            signature_version="s3v4",
+            connect_timeout=5,
+            read_timeout=10,
+            retries={"max_attempts": 1},
+        ),
         region_name=settings.s3_region,
     )
 
