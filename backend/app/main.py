@@ -101,6 +101,39 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/debug-storage")
+async def debug_storage():
+    import os, subprocess
+    from pathlib import Path
+    storage_dir = Path(settings.storage_local_dir)
+    files = []
+    if storage_dir.exists():
+        for f in storage_dir.rglob("*"):
+            if f.is_file():
+                files.append(str(f.relative_to(storage_dir)))
+    # Check mount points
+    try:
+        mounts = subprocess.check_output(["mount"], text=True)
+    except Exception:
+        mounts = "unavailable"
+    # Check df
+    try:
+        df = subprocess.check_output(["df", "-h", str(storage_dir)], text=True)
+    except Exception:
+        df = "unavailable"
+    return {
+        "storage_backend": settings.storage_backend,
+        "storage_local_dir": settings.storage_local_dir,
+        "dir_exists": storage_dir.exists(),
+        "files_count": len(files),
+        "files": files[:20],
+        "env_STORAGE_LOCAL_DIR": os.environ.get("STORAGE_LOCAL_DIR", "NOT SET"),
+        "env_STORAGE_BACKEND": os.environ.get("STORAGE_BACKEND", "NOT SET"),
+        "df": df,
+        "mounts_data": [l for l in mounts.split("\n") if "data" in l.lower()] if isinstance(mounts, str) else [],
+    }
+
+
 
 # ── Frontend statique (SPA React) ────────────────
 
