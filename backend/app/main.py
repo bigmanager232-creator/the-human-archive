@@ -101,6 +101,27 @@ async def health():
     return {"status": "ok"}
 
 
+# TEMPORAIRE : diagnostic stockage
+@app.get("/debug-storage")
+async def debug_storage():
+    import os
+    from pathlib import Path
+    storage_dir = Path(settings.storage_local_dir)
+    files = []
+    if storage_dir.exists():
+        for f in storage_dir.rglob("*"):
+            if f.is_file():
+                files.append(str(f.relative_to(storage_dir)))
+    return {
+        "storage_backend": settings.storage_backend,
+        "storage_local_dir": settings.storage_local_dir,
+        "dir_exists": storage_dir.exists(),
+        "files_count": len(files),
+        "files": files[:20],
+        "env_storage": os.environ.get("STORAGE_BACKEND", "NOT SET"),
+    }
+
+
 
 # ── Frontend statique (SPA React) ────────────────
 
