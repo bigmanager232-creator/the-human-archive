@@ -101,6 +101,28 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/debug-r2")
+async def debug_r2():
+    import traceback
+    result = {"storage_backend": settings.storage_backend}
+    try:
+        from app.core.storage_dispatch import get_file_object
+        result["endpoint"] = settings.minio_endpoint
+        result["bucket"] = settings.minio_bucket
+        result["ssl"] = settings.minio_use_ssl
+        result["region"] = settings.s3_region
+        result["user_prefix"] = settings.minio_root_user[:8] + "..."
+        # Test connexion
+        from app.core.storage import get_s3_client
+        client = get_s3_client()
+        resp = client.list_objects_v2(Bucket=settings.minio_bucket, MaxKeys=5)
+        result["connection"] = "OK"
+        result["objects"] = [o["Key"] for o in resp.get("Contents", [])]
+    except Exception as e:
+        result["error"] = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
 
 
 # ── Frontend statique (SPA React) ────────────────
