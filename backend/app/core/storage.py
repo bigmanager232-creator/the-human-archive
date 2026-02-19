@@ -42,17 +42,33 @@ def get_s3_public_client():
 
 
 def ensure_bucket_exists():
-    """Créer le bucket s'il n'existe pas."""
+    """Vérifier la connectivité au bucket S3/R2."""
     client = get_s3_client()
+    bucket = settings.minio_bucket
+    print(f"🪣 Bucket configuré : '{bucket}'")
+    print(f"🔗 Endpoint : {_build_endpoint_url(settings.minio_endpoint)}")
     try:
-        client.head_bucket(Bucket=settings.minio_bucket)
+        # ListObjectsV2 fonctionne avec les tokens R2 "Object Read & Write"
+        # contrairement à HeadBucket qui nécessite des permissions admin
+        resp = client.list_objects_v2(Bucket=bucket, MaxKeys=1)
+        count = resp.get("KeyCount", 0)
+        print(f"✅ Connexion stockage OK (bucket '{bucket}', {count} objet(s) trouvé(s))")
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "")
         if error_code in ("404", "NoSuchBucket"):
-            client.create_bucket(Bucket=settings.minio_bucket)
+            print(f"⚠️  Bucket '{bucket}' introuvable – tentative de création...")
+            try:
+                client.create_bucket(Bucket=bucket)
+                print(f"✅ Bucket '{bucket}' créé")
+            except ClientError as ce:
+                print(f"❌ Impossible de créer le bucket : {ce}")
+        elif error_code == "403":
+            print(f"⚠️  Accès refusé au bucket '{bucket}' – vérifier :")
+            print(f"   - Le nom du bucket correspond exactement (sensible à la casse)")
+            print(f"   - Le token API R2 a les droits sur ce bucket")
+            print(f"   - Le token n'est pas restreint à un autre bucket")
         else:
-            # R2 peut retourner 403 si le bucket existe mais les permissions sont limitées
-            print(f"⚠️  Vérification bucket : {e}")
+            print(f"⚠️  Erreur stockage : {e}")
 
 
 async def upload_file(file_data: bytes, object_key: str, content_type: str) -> str:

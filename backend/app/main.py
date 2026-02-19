@@ -104,19 +104,23 @@ async def health():
 @app.get("/debug-r2")
 async def debug_r2():
     import traceback
-    result = {"storage_backend": settings.storage_backend}
+    from app.core.storage import get_s3_client, _build_endpoint_url
+    result = {
+        "storage_backend": settings.storage_backend,
+        "endpoint_raw": settings.minio_endpoint,
+        "endpoint_computed": _build_endpoint_url(settings.minio_endpoint),
+        "public_endpoint_raw": settings.minio_public_endpoint,
+        "public_endpoint_computed": _build_endpoint_url(settings.minio_public_endpoint),
+        "bucket": settings.minio_bucket,
+        "ssl": settings.minio_use_ssl,
+        "region": settings.s3_region,
+        "user_prefix": settings.minio_root_user[:8] + "..." if settings.minio_root_user else "VIDE",
+    }
     try:
-        from app.core.storage_dispatch import get_file_object
-        result["endpoint"] = settings.minio_endpoint
-        result["bucket"] = settings.minio_bucket
-        result["ssl"] = settings.minio_use_ssl
-        result["region"] = settings.s3_region
-        result["user_prefix"] = settings.minio_root_user[:8] + "..."
-        # Test connexion
-        from app.core.storage import get_s3_client
         client = get_s3_client()
         resp = client.list_objects_v2(Bucket=settings.minio_bucket, MaxKeys=5)
         result["connection"] = "OK"
+        result["key_count"] = resp.get("KeyCount", 0)
         result["objects"] = [o["Key"] for o in resp.get("Contents", [])]
     except Exception as e:
         result["error"] = str(e)
