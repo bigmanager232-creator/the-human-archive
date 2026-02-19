@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # Stockage
     storage_backend: str = "s3"  # "s3" ou "local"
-    storage_local_dir: str = "/app/uploads"
+    storage_local_dir: str = "/data/uploads"
 
     # MinIO / S3 (utilisé si storage_backend == "s3")
     minio_endpoint: str = "minio:9000"
