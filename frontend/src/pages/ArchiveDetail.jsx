@@ -13,6 +13,7 @@ function withToken(url) {
 
 function MediaPlayer({ archive }) {
   const { media_type, file_url, title, mime_type } = archive;
+  const [mediaError, setMediaError] = useState(false);
 
   if (!file_url) {
     return (
@@ -22,12 +23,34 @@ function MediaPlayer({ archive }) {
     );
   }
 
+  if (mediaError) {
+    return (
+      <div className="media-player media-player--empty" style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: 'var(--space-2xl)',
+        background: 'var(--color-ink)', color: 'var(--color-paper)',
+        borderRadius: 'var(--radius-md)', minHeight: '200px',
+      }}>
+        <p style={{ fontSize: '1.1rem', marginBottom: 'var(--space-sm)' }}>
+          Fichier m&eacute;dia indisponible
+        </p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--color-clay)' }}>
+          Le fichier a &eacute;t&eacute; supprim&eacute; du stockage ou est temporairement inaccessible.
+        </p>
+      </div>
+    );
+  }
+
   if (media_type === 'video') {
     return (
       <div className="media-player media-player--video">
-        <video controls preload="metadata">
+        <video
+          controls
+          preload="metadata"
+          onError={() => setMediaError(true)}
+        >
           <source src={withToken(file_url)} type={mime_type || 'video/mp4'} />
-          Votre navigateur ne supporte pas la lecture vidéo.
+          Votre navigateur ne supporte pas la lecture vid&eacute;o.
         </video>
       </div>
     );
@@ -40,7 +63,12 @@ function MediaPlayer({ archive }) {
           <div className="audio-icon">&#9835;</div>
           <h3>{title}</h3>
         </div>
-        <audio controls preload="metadata" style={{ width: '100%' }}>
+        <audio
+          controls
+          preload="metadata"
+          style={{ width: '100%' }}
+          onError={() => setMediaError(true)}
+        >
           <source src={withToken(file_url)} type={mime_type || 'audio/mpeg'} />
           Votre navigateur ne supporte pas la lecture audio.
         </audio>
